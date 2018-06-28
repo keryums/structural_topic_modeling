@@ -1,0 +1,167 @@
+---
+title: "NLP Final Project: Structural Topic Modelling "
+author: "Ker-Yu Ong"
+date: "27/06/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd('/Users/booranium/usf/nlp/data')
+```
+
+```{r}
+library(stm)
+library(igraph)
+library(stmCorrViz)
+data = read.delim('reviews_clean', sep = '|')
+```
+
+# Pre-Processing
+
+`stm`'s `textProcessor` performs stemming and stopword removal. 
+
+```{r}
+processed <- textProcessor(data$reviewText, metadata = data)
+```
+
+```{r}
+processed
+```
+
+```{r}
+head(processed$documents,1)
+```
+
+`prepDocuments` removes low frequency words and documents with a low word count based on a default threshold of 1 (i.e. words that occur only once). 
+
+```{r}
+out <- prepDocuments(processed$documents, processed$vocab, processed$meta)
+```
+
+The object `out` contains `documents`, i.e. the vectorized review:
+
+```{r}
+head(out$documents,1)
+```
+
+`vocab`, i.e. the review tokens:
+
+```{r}
+head(out$vocab, 10)
+```
+
+```{r}
+tail(out$vocab, 10)
+```
+
+as well as `meta`, the review metadata or covariate information:
+
+```{r}
+head(out$meta,1)
+```
+
+Let's save these out to variables:
+
+```{r}
+docs <- out$documents
+vocab <- out$vocab
+meta <- out$meta
+```
+
+# Model Fitting 
+
+Let's now fit various STM models and see how topics vary with different covariates. We use `init.type = "Spectral"` to specify spectral initialization via spectral decomposition (non-negative matrix factorization) of the word co-occurrence matrix. The developers of STM generally recommend using the spectral initialization as they've found it to produce the best results consistently (Roberts et al. 2016a).
+
+## Model 1: Sentiment as Covariate 
+
+First, using `sent_sign`, i.e. review sentiment, as our covariate:
+
+```{r}
+fit1 <- stm(out$documents, out$vocab, K=5, prevalence=~sent_sign, max.em.its=100, data=out$meta, init.type="Spectral", seed=42)
+```
+
+```{r}
+plot(fit1, type="summary", xlim=c(0,.4))
+```
+We see that topic 2 has the highest expected proportion whereas topic 1 has the lowest. At first glance, these topics seem rather generic and non-distinguishable, but we can also look at their constituent words using other metrics. 
+
+First, let's look at the constituent words ranked by probability: 
+```{r}
+plot(fit1, type="labels", topics=c(2,4,3,5,1))
+```
+
+We can compare the highest and lowest proportion topics as follows:
+
+```{r}
+plot(fit1, type="perspectives", topics=c(2,1))
+```
+We can also look consitutent words using other metrics:
+```{r}
+labelTopics(fit1, c(2,4,3,5,1))
+```
+The FREX metric, which weights words by their overall frequency and how exclusive they are to the topic, seems most informative. We can start to distinguish topics by genre. 
+
+## Model 2: Product Rating as Covariate 
+
+Let's create another model using `overall` (product rating) as the covariates:
+
+```{r}
+# using 20 iterations for knitting sake; ideally, you'd want 75-100 iterations
+fit2 <- stm(out$documents, out$vocab, K=5, prevalence=~overall, max.em.its=20, data=out$meta, init.type="Spectral", seed=42)
+```
+
+```{r}
+plot(fit2, type="labels", topics=c(2,4,5,3,1))
+```
+Let's explore the highest and lowest proportional topics 
+
+```{r}
+plot(fit2, type="perspectives", topics=c(2,1))
+```
+
+Other word metrics: 
+
+```{r}
+labelTopics(fit2, c(2,4,5,2,1))
+```
+
+## Model 3: Review Year as Covariate 
+
+```{r}
+# using 20 iterations for knitting sake; ideally, you'd want 75-100 iterations
+fit3 <- stm(out$documents, out$vocab, K=5, prevalence=~reviewYear, max.em.its=20, data=out$meta, init.type="Spectral", seed=42)
+```
+
+Visualize constituent words:
+
+```{r}
+labelTopics(fit3, c(2,4,5,2,1))
+```
+
+# Estimating Covariate Effect 
+We can estimate the effect of covariate on topic emergence using `estimateEffect` and visualize it as follows:
+
+```{r}
+out$meta$sent_sign <- as.factor(out$meta$sent_sign)
+prep <- estimateEffect(1:5 ~ sent_sign, fit1, meta=out$meta,  uncertainty="Global")
+plot(prep, covariate="sent_sign", topics=c(2, 4, 3, 5, 1), model=fit1, method="difference", cov.value1="1", cov.value2="0", xlab="More Negative ... More Positive", main="Effect of Sentiment", xlim=c(-.25,.25), labeltype ="custom", custom.labels=c('Emo Rock', 'Folk', 'Rap', 'Female', 'Rock'))
+```
+
+# Finding Optimal Number of Topics with `searchK()`  
+```{r, eval=FALSE}
+# This takes ages to run so do not evaluate. See slide on searchK in presentation deck.
+kResult <- searchK(out$documents, out$vocab, K=c(5,20), prevalence=~overall+reviewYear,data=meta)
+```
+
+```{r, eval = FALSE}
+kResult
+```
+
+```{r, eval = FALSE}
+plot(kResult)
+```
+
+
+
+
