@@ -13,7 +13,7 @@ Here are some links about STM:
 Data (Amazon's Health & Personal Care Category)
 
 * [Product Reviews](http://snap.stanford.edu/data/amazon/productGraph/categoryFiles/reviews_Health_and_Personal_Care.json.gz)
-* [Product Metadata] (http://snap.stanford.edu/data/amazon/productGraph/categoryFiles/meta_Health_and_Personal_Care.json.gz)
+* [Product Metadata](http://snap.stanford.edu/data/amazon/productGraph/categoryFiles/meta_Health_and_Personal_Care.json.gz)
 
 Notebooks 
 
