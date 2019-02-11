@@ -1,4 +1,4 @@
-# USF Natural Language Processing Final Project
+# USF NLP Final Project - Structural Topic Modelling
 
 For this project, I explored Structural Topic Modelling (STM) on Amazon reviews using R's `stm` package. 
 The point of STM is to incorporate covariate information (i.e. document-level metadata) into a standard topic model. 
